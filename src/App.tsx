@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import { PDFDocument } from 'pdf-lib';
 import { 
   Upload, 
   FileText, 
@@ -15,39 +16,24 @@ import {
 
 // Main App Component
 export default function App() {
-  const [files, setFiles] = useState([]);
+  const [files, setFiles] = useState<any[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState(null);
-  const [pdfLibLoaded, setPdfLibLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Load pdf-lib from CDN
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = "https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js";
-    script.async = true;
-    script.onload = () => setPdfLibLoaded(true);
-    script.onerror = () => setError("Failed to load PDF library. Please check your internet connection.");
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
-
   // Drag and Drop Handlers
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
   };
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     
@@ -64,7 +50,7 @@ export default function App() {
     addFiles(droppedFiles);
   };
 
-  const handleFileInput = (e) => {
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
       const selectedFiles = Array.from(e.target.files).filter(file => validTypes.includes(file.type));
@@ -72,7 +58,7 @@ export default function App() {
     }
   };
 
-  const addFiles = (newFiles) => {
+  const addFiles = (newFiles: File[]) => {
     setSuccessMsg('');
     setError(null);
     const filesWithId = newFiles.map(file => ({
@@ -85,11 +71,11 @@ export default function App() {
     setFiles(prev => [...prev, ...filesWithId]);
   };
 
-  const removeFile = (id) => {
+  const removeFile = (id: string) => {
     setFiles(prev => prev.filter(f => f.id !== id));
   };
 
-  const moveFile = (index, direction) => {
+  const moveFile = (index: number, direction: 'up' | 'down') => {
     const newFiles = [...files];
     if (direction === 'up' && index > 0) {
       [newFiles[index], newFiles[index - 1]] = [newFiles[index - 1], newFiles[index]];
@@ -105,17 +91,11 @@ export default function App() {
       return;
     }
 
-    if (!pdfLibLoaded || !window.PDFLib) {
-      setError("PDF Library is still loading. Please wait a moment.");
-      return;
-    }
-
     setProcessing(true);
     setError(null);
     setSuccessMsg('');
 
     try {
-      const { PDFDocument } = window.PDFLib;
       const mergedPdf = await PDFDocument.create();
 
       for (const fileObj of files) {
@@ -150,12 +130,12 @@ export default function App() {
       }
 
       const mergedPdfBytes = await mergedPdf.save();
-      const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+      const blob = new Blob([mergedPdfBytes as any], { type: 'application/pdf' });
 
       // Try to use File System Access API if available
       if ('showSaveFilePicker' in window) {
         try {
-          const handle = await window.showSaveFilePicker({
+          const handle = await (window as any).showSaveFilePicker({
             suggestedName: 'merged_document.pdf',
             types: [{
               description: 'PDF Document',
@@ -166,7 +146,7 @@ export default function App() {
           await writable.write(blob);
           await writable.close();
           setSuccessMsg('PDF saved successfully!');
-        } catch (err) {
+        } catch (err: any) {
           if (err.name !== 'AbortError') {
             downloadBlob(blob);
           }
@@ -184,7 +164,7 @@ export default function App() {
     }
   };
 
-  const downloadBlob = (blob) => {
+  const downloadBlob = (blob: Blob) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -343,10 +323,10 @@ export default function App() {
           <div className="p-6 border-t border-slate-100 bg-white flex justify-end">
             <button
               onClick={mergePDFs}
-              disabled={files.length < 1 || processing || !pdfLibLoaded}
+              disabled={files.length < 1 || processing}
               className={`
                 flex items-center px-8 py-4 rounded-xl font-bold text-lg shadow-xl transition-all
-                ${files.length < 1 || processing || !pdfLibLoaded
+                ${files.length < 1 || processing
                   ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none' 
                   : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-200 hover:-translate-y-0.5 active:translate-y-0'
                 }
