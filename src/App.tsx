@@ -131,11 +131,17 @@ export default function App() {
             if (ctx) {
               const imageData = new ImageData(new Uint8ClampedArray(rgba), width, height);
               ctx.putImageData(imageData, 0, 0);
+
+              // Handle transparency by compositing over white background
+              ctx.globalCompositeOperation = 'destination-over';
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, width, height);
               
-              const pngUrl = canvas.toDataURL('image/png');
-              const pngImageBytes = await fetch(pngUrl).then(res => res.arrayBuffer());
+              // Convert to JPEG with 0.8 quality to reduce file size
+              const jpgUrl = canvas.toDataURL('image/jpeg', 0.8);
+              const jpgImageBytes = await fetch(jpgUrl).then(res => res.arrayBuffer());
               
-              const image = await mergedPdf.embedPng(pngImageBytes);
+              const image = await mergedPdf.embedJpg(jpgImageBytes);
               const page = mergedPdf.addPage([image.width, image.height]);
               
               page.drawImage(image, {
