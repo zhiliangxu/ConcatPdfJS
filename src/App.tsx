@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PDFDocument } from 'pdf-lib';
+import UTIF from 'utif';
 import { 
   Upload, 
   FileText, 
@@ -37,12 +38,12 @@ export default function App() {
     e.preventDefault();
     setIsDragging(false);
     
-    // Accept PDF, JPG, JPEG, PNG
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-    const droppedFiles = Array.from(e.dataTransfer.files).filter(file => validTypes.includes(file.type));
+    // Accept PDF, JPG, JPEG, PNG, TIFF
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/tiff'];
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(file => validTypes.includes(file.type) || file.name.toLowerCase().endsWith('.tif') || file.name.toLowerCase().endsWith('.tiff'));
     
     if (droppedFiles.length === 0) {
-      setError("Please drop valid PDF or Image (JPG, PNG) files.");
+      setError("Please drop valid PDF or Image (JPG, PNG, TIFF) files.");
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -52,8 +53,8 @@ export default function App() {
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-      const selectedFiles = Array.from(e.target.files).filter(file => validTypes.includes(file.type));
+      const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/tiff'];
+      const selectedFiles = Array.from(e.target.files).filter(file => validTypes.includes(file.type) || file.name.toLowerCase().endsWith('.tif') || file.name.toLowerCase().endsWith('.tiff'));
       addFiles(selectedFiles);
     }
   };
@@ -61,13 +62,19 @@ export default function App() {
   const addFiles = (newFiles: File[]) => {
     setSuccessMsg('');
     setError(null);
-    const filesWithId = newFiles.map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
-      file,
-      name: file.name,
-      type: file.type, // Store type for icon logic
-      size: (file.size / 1024 / 1024).toFixed(2) // MB
-    }));
+    const filesWithId = newFiles.map(file => {
+      let type = file.type;
+      if (!type && (file.name.toLowerCase().endsWith('.tif') || file.name.toLowerCase().endsWith('.tiff'))) {
+        type = 'image/tiff';
+      }
+      return {
+        id: Math.random().toString(36).substr(2, 9),
+        file,
+        name: file.name,
+        type: type, // Store type for icon logic
+        size: (file.size / 1024 / 1024).toFixed(2) // MB
+      };
+    });
     setFiles(prev => [...prev, ...filesWithId]);
   };
 
@@ -100,6 +107,7 @@ export default function App() {
 
       for (const fileObj of files) {
         const fileBuffer = await fileObj.file.arrayBuffer();
+        const isTiff = fileObj.file.type === 'image/tiff' || fileObj.name.toLowerCase().endsWith('.tif') || fileObj.name.toLowerCase().endsWith('.tiff');
 
         if (fileObj.file.type === 'application/pdf') {
           // Handle PDF merging
@@ -107,6 +115,38 @@ export default function App() {
           const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
           copiedPages.forEach((page) => mergedPdf.addPage(page));
         } 
+        else if (isTiff) {
+          // Handle TIFF
+          const ifds = UTIF.decode(fileBuffer);
+          for (const ifd of ifds) {
+            UTIF.decodeImage(fileBuffer, ifd);
+            const rgba = UTIF.toRGBA8(ifd);
+            const width = ifd.width;
+            const height = ifd.height;
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              const imageData = new ImageData(new Uint8ClampedArray(rgba), width, height);
+              ctx.putImageData(imageData, 0, 0);
+              
+              const pngUrl = canvas.toDataURL('image/png');
+              const pngImageBytes = await fetch(pngUrl).then(res => res.arrayBuffer());
+              
+              const image = await mergedPdf.embedPng(pngImageBytes);
+              const page = mergedPdf.addPage([image.width, image.height]);
+              
+              page.drawImage(image, {
+                x: 0,
+                y: 0,
+                width: image.width,
+                height: image.height,
+              });
+            }
+          }
+        }
         else if (fileObj.file.type === 'image/jpeg' || fileObj.file.type === 'image/png') {
           // Handle Image embedding
           let image;
@@ -218,7 +258,7 @@ export default function App() {
                 <input 
                   type="file" 
                   multiple 
-                  accept=".pdf, .jpg, .jpeg, .png" 
+                  accept=".pdf, .jpg, .jpeg, .png, .tiff, .tif" 
                   onChange={handleFileInput} 
                   className="hidden" 
                 />

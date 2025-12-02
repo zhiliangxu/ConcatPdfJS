@@ -5,7 +5,7 @@ A secure, client-side application to combine PDFs and Images into a single PDF f
 ## Features
 
 - **Merge PDFs**: Combine multiple PDF files into one.
-- **Embed Images**: Add JPG and PNG images to your PDF.
+- **Embed Images**: Add JPG, PNG, and TIFF images to your PDF.
 - **Reorder Files**: Drag and drop or use up/down arrows to change the order of files.
 - **Client-Side Processing**: All processing happens in your browser. No files are uploaded to any server.
 - **Secure & Private**: Your data never leaves your device.
