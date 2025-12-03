@@ -59,6 +59,11 @@ npm run preview
 - **lucide-react**: Icons.
 - **Tailwind CSS**: Styling (via CDN or inline styles - *Note: The current setup uses inline styles and standard CSS, but the classes suggest Tailwind usage. Ensure Tailwind is configured if you want to use utility classes fully, or stick to the provided CSS.*)
 
+## Try It
+
+- [GitHub Pages](https://zhiliangxu.github.io/concat-pdf/)
+- [Netlify](https://singular-concha-1743e1.netlify.app/)
+
 ## License
 
 See the [LICENSE](LICENSE) file for details.

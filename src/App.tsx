@@ -258,7 +258,7 @@ export default function App() {
                 <p className="text-lg font-medium text-slate-700">
                   Drag & Drop PDF or Image files here
                 </p>
-                <p className="text-sm text-slate-400 mt-1">Supports PDF, JPG, PNG</p>
+                <p className="text-sm text-slate-400 mt-1">Supports PDF, JPG, PNG, TIF</p>
               </div>
               <label className="cursor-pointer">
                 <input 
